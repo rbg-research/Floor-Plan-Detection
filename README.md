@@ -87,6 +87,46 @@ To use blender you will need to install it into the home directory. The link to 
 
 Running the first cell of the example notebook will download all these requirements automatically.
 
+## Docker Notebook Workflow
+This repository now includes a small Docker setup for running a Jupyter Notebook server for development.
+
+Docker now uses `requirements-docker.txt` instead of the legacy `requirements.txt`. The original file is pinned to an older local environment and includes packages such as `mkl-fft==1.0.6` that do not install cleanly in a current container build.
+
+Build and start it with:
+```sh
+docker compose up --build
+```
+
+Then open:
+```sh
+http://localhost:8888
+```
+No token is required in the current Docker setup.
+
+GPU notes:
+- The container now requests GPU access through Docker Compose.
+- This only works if Docker Desktop is using WSL2 and your host NVIDIA drivers support Docker GPU passthrough.
+- The code now has a basic CPU fallback in the core inference path, so the notebook can still start even when no GPU is available.
+
+Notes about the current project state:
+- The Docker setup is aimed at development and notebook-based experimentation first.
+- The main 3D export pipeline still assumes a local Blender binary.
+- Several scripts expect files such as `model_best_val_loss_var.pkl`, but the repo currently includes `model/model_1427.pth`, so the runtime wiring is not fully aligned yet.
+- `config.py` and `Inference.py` still contain machine-specific or Linux-specific path assumptions that should be cleaned up before treating this as a portable production image.
+
+### Downloading model weights and Blender inside Docker
+If the notebook cannot access the checkpoint because `gdown` was not run yet, use:
+```sh
+python -m utils.asset_setup --checkpoint
+```
+
+To also download and extract Blender into the default `2.93.1/` folder used by `config.py`, run:
+```sh
+python -m utils.asset_setup --all
+```
+
+If you want a custom checkpoint location, set `FLOORPLAN_CHECKPOINT` to that path before running the code.
+
 
    [ESPCN]: <https://github.com/fannymonori/TF-ESPCN>
    [EDSR]: <https://github.com/Saafke/EDSR_Tensorflow>

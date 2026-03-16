@@ -1,0 +1,18 @@
+services:
+  notebook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: floorplan-notebook
+    gpus: all
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      JUPYTER_TOKEN: devtoken
+    stdin_open: true
+    tty: true

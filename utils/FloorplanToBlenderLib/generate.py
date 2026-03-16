@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+import torch
 
 from . import detect
 from . import IO
 from . import transform
+from utils.asset_setup import load_trained_checkpoint
 
 '''
 Generate
@@ -23,6 +25,10 @@ path = "Data/"
 Path_pb = ["EDSR_x","ESPCN_x","LapSRN_x","FSRCNN_x"]
 meth = ["edsr","espcn","lapsrn","fsrcnn"] 
 
+
+def get_runtime_device():
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=False, SR=[2,"lapsrn"]):
     '''
     Generate all data files
@@ -32,9 +38,15 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
     @Param rotation, vector of float
     @Return path to generated file, shape
     '''
+    print(CubiCasa)
     global path
     if CubiCasa == True:
         import numpy as np
+        import torch.nn.functional as F
+
+        device = get_runtime_device()
+        make_res = False
+        SR_img = None
         if SR!=None:
             pos = np.argmax(np.array(meth)==SR[1])
             make_res = True
@@ -43,8 +55,6 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
         
         import matplotlib.pyplot as plt
         import matplotlib.image as mpimg
-        import torch
-        import torch.nn.functional as F
         import cv2
         from torch.utils.data import DataLoader
         from model import get_model
@@ -65,11 +75,11 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
         split = [21, 12, 11]
         model.conv4_ = torch.nn.Conv2d(256, n_classes, bias=True, kernel_size=1)
         model.upsample = torch.nn.ConvTranspose2d(n_classes, n_classes, kernel_size=4, stride=4)
-        checkpoint = torch.load('model_best_val_loss_var.pkl')
+        checkpoint = load_trained_checkpoint(map_location=device)
 
         model.load_state_dict(checkpoint['model_state'])
         model.eval()
-        model.cuda()
+        model.to(device)
         img_path = imgpath
 
         # Create tensor for pytorch
@@ -83,7 +93,7 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
         img = np.moveaxis(img, -1, 0)
 
         # Convert to pytorch, enable cuda
-        img = torch.tensor([img.astype(np.float32)]).cuda()
+        img = torch.tensor([img.astype(np.float32)], device=device)
         
         # Super-Resolution
         if make_res == True:
@@ -102,7 +112,7 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
             img = sr.upsample(np.array((np.moveaxis(img[0].cpu().data.numpy(), 0, -1)/ 2 + 0.5)*255,dtype='uint8'))
             
             SR_img = img
-            img = torch.tensor(np.moveaxis([(img/255-0.5)*2],3,1)).cuda().float()
+            img = torch.tensor(np.moveaxis([(img/255-0.5)*2],3,1), device=device).float()
             
         n_rooms = 12
         n_icons = 11
@@ -118,7 +128,7 @@ def generate_all_files(imgpath, info, position=None, rotation=None, CubiCasa=Fal
 
             rotations = [(0, 0), (1, -1), (2, 2), (-1, 1)]
             pred_count = len(rotations)
-            prediction = torch.zeros([pred_count, n_classes, height, width])
+            prediction = torch.zeros([pred_count, n_classes, height, width], device=device)
             for i, r in enumerate(rotations):
                 forward, back = r
                 # We rotate first the image

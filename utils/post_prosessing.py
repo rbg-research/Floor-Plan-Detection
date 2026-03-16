@@ -9,6 +9,9 @@ from scipy.ndimage import measurements
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 from collections.abc import Iterable
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 def get_wall_polygon(wall_heatmaps, room_segmentation, threshold, wall_classes, point_orientations, orientation_ranges):
@@ -945,7 +948,7 @@ def extract_wall_polygon(wall, wall_points, segmentation, seg_class):
         # widths = reject_outliers(widths)
         # if len(widths) == 0:
             # return None
-        wall_width = stats.mode(widths).mode[0]
+        wall_width = stats.mode(widths).mode
         if wall_width > y2 - y1:
             wall_width = y2 - y1
         w_delta = int(wall_width / 2.0)
@@ -1001,7 +1004,8 @@ def extract_wall_polygon(wall, wall_points, segmentation, seg_class):
         # widths = reject_outliers(widths)
         # if len(widths) == 0:
             # return None
-        wall_width = stats.mode(widths).mode[0]
+        logging.info(f"Printing widths: {widths}")
+        wall_width = stats.mode(widths).mode
         if wall_width > x2 - x1:
             wall_width = x2 - x1
         w_delta = int(wall_width / 2.0)
@@ -1064,9 +1068,9 @@ def split_validation(tensor, shape, split):
     width = shape[1]
     heatmaps, rooms, icons = torch.split(tensor, [split[0], 1, 1], 1)
 
-    heatmaps = F.interpolate(heatmaps, size=shape, mode='bilinear', align_corners=False).squeeze().data.numpy()
-    icons = F.interpolate(icons, size=shape, mode='nearest').squeeze().data.numpy()
-    rooms = F.interpolate(rooms, size=shape, mode='nearest').squeeze().data.numpy()
+    heatmaps = F.interpolate(heatmaps, size=shape, mode='bilinear', align_corners=False).squeeze().detach().cpu().numpy()
+    icons = F.interpolate(icons, size=shape, mode='nearest').squeeze().detach().cpu().numpy()
+    rooms = F.interpolate(rooms, size=shape, mode='nearest').squeeze().detach().cpu().numpy()
 
     rooms_new = np.empty([split[1], height, width], float)
     icons_new = np.empty([split[2], height, width], float)
@@ -1087,9 +1091,9 @@ def split_prediction(tensor, shape, split):
     icons = F.softmax(icons, 0)
     rooms = F.softmax(rooms, 0)
 
-    heatmaps = heatmaps.data.numpy()
-    icons = icons.data.numpy()
-    rooms = rooms.data.numpy()
+    heatmaps = heatmaps.detach().cpu().numpy()
+    icons = icons.detach().cpu().numpy()
+    rooms = rooms.detach().cpu().numpy()
 
     return heatmaps, rooms, icons
 

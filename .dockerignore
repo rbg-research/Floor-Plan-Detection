@@ -1,0 +1,11 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+Data/
+floorplan/
+2.93.1/
+model_best_val_loss_var.pkl

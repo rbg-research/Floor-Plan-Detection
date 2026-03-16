@@ -233,7 +233,7 @@ class hg_furukawa_original(nn.Module):
         # Pre-trained network weights from Human pose estimation via Convolutional Part Heatmap Regression
         # https://www.adrianbulat.com/human-pose-estimation MPII
         model = model_1427.model_1427
-        model.load_state_dict(torch.load('model/model_1427.pth'))
+        model.load_state_dict(torch.load('model/model_1427.pth', map_location='cpu'))
 
         for (src, dst) in zip(model.parameters(), self.parameters()):
             dst[:].data.copy_(src[:].data)

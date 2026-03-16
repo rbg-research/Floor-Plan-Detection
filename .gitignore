@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*.pkl
+2.93.1/
+
+Data/
+*.blend
+*.stl

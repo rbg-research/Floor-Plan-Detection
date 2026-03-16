@@ -91,13 +91,14 @@ def up_sample_predictions(pred, size):
 
 
 def get_px_acc(pred, target, input_slice, sub=1):
+    device = pred.device
     pred_arr = torch.split(pred, input_slice)
     heatmap_pred, rooms_pred, icons_pred = pred_arr
     rooms_pred = softmax(rooms_pred, 0).argmax(0)
-    rooms_target = target[input_slice[0]].type(torch.cuda.LongTensor) - sub
+    rooms_target = target[input_slice[0]].to(device=device, dtype=torch.long) - sub
     rooms_pos = torch.eq(rooms_pred, rooms_target).sum()
 
-    icons_target = target[input_slice[0]+1].type(torch.cuda.LongTensor) - sub
+    icons_target = target[input_slice[0]+1].to(device=device, dtype=torch.long) - sub
     icons_pred = softmax(icons_pred, 0).argmax(0)
     icons_pos = torch.eq(icons_pred, icons_target).sum()
 
@@ -130,7 +131,8 @@ def polygons_to_tensor(polygons_val, types_val, room_polygons_val, room_types_va
 
 
 def get_evaluation_tensors(val, model, split, rotate=True, n_classes=44):
-    images_val = val['image'].cuda()
+    device = next(model.parameters()).device
+    images_val = val['image'].to(device)
     labels_val = val['label']
     height = labels_val.shape[2]
     width = labels_val.shape[3]
@@ -140,7 +142,7 @@ def get_evaluation_tensors(val, model, split, rotate=True, n_classes=44):
         rot = RotateNTurns()
         rotations = [(0, 0), (1, -1), (2, 2), (-1, 1)]
         pred_count = len(rotations)
-        prediction = torch.zeros([pred_count, n_classes, height, width])
+        prediction = torch.zeros([pred_count, n_classes, height, width], device=device)
         for i, r in enumerate(rotations):
             forward, back = r
             # We rotate first the image
